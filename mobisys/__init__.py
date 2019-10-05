@@ -1,3 +1,3 @@
-from mobitools.plots.plots import *
-from mobitools.weather.vanweather import *
-from mobitools.system.system import *
+from mobisys.plots.plots import *
+from mobisys.weather.vanweather import *
+from mobisys.system.system import *
