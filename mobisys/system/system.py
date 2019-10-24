@@ -48,7 +48,7 @@ def get_mem_types(df):
     return idx24,idx365,idx365p,idx365all,idx90
 
 
-def add_station_coords(df,sdf,bidirectional=True,drop=True):
+def add_station_coords(df,sdf,drop=True):
     
     """
     WARNING: This drops records if the listed Departer/Return station name
@@ -64,40 +64,48 @@ def add_station_coords(df,sdf,bidirectional=True,drop=True):
     
     # Convert geometry to lat/long coords and drop geometry columns
     sdf = sdf.to_crs(epsg=4326)
-    sdf['coordinates'] = sdf['geometry'].map(lambda x: (x.y,x.x))
+    #sdf['coordinates'] = sdf['geometry'].map(lambda x: (x.y,x.x))
+    sdf['lat'] = sdf['geometry'].map(lambda x: x.y)
+    sdf['long'] = sdf['geometry'].map(lambda x: x.x)
+    
     del sdf['geometry']
     
     
-    sdf = sdf[sdf['coordinates'].map(lambda x: x[0]>1)]   # drop stations that don't have a sensible latitude
+    sdf = sdf[sdf['lat'] >1 ]   # drop stations that don't have a sensible latitude
 
-    df = pd.merge(df,sdf[['name','neighbourhood','coordinates']],how=how,left_on='Departure station',right_on='name',
+    df = pd.merge(df,sdf[['name','neighbourhood','lat','long']],how=how,left_on='Departure station',right_on='name',
                   suffixes=('_x',' departure'))
 
-    df = pd.merge(df,sdf[['name','neighbourhood','coordinates']],how=how,left_on='Return station',right_on='name',
+    df = pd.merge(df,sdf[['name','neighbourhood','lat','long']],how=how,left_on='Return station',right_on='name',
                   suffixes=(' departure',' return'))
 
     
 
     df = df.rename(columns={'neighbourhood return':'Return neighbourhood',
                     'neighbourhood departure':'Departure neighbourhood',
-                    'coordinates return':'Return coords',
-                    'coordinates departure':'Departure coords'})
+                    'lat return':'Return lat',
+                    'lat departure':'Departure lat',
+                    'long return':'Return long',
+                    'long departure':'Departure long'})
     del df['name departure']
     del df['name return']
 
-    df['Departure coords'] = df['Departure coords'].apply(lambda x: (0, 0) if x is np.nan else x)
-    df['Return coords'] = df['Return coords'].apply(lambda x: (0, 0) if x is np.nan else x)
-    
+#     df['Departure coords'] = df['Departure coords'].apply(lambda x: (0, 0) if x is np.nan else x)
+#     df['Return coords'] = df['Return coords'].apply(lambda x: (0, 0) if x is np.nan else x)
+    df['Departure lat'] = df['Departure lat'].fillna(0)
+    df['Return lat'] = df['Return lat'].fillna(0)
+    df['Departure long'] = df['Departure long'].fillna(0)
+    df['Return long'] = df['Return long'].fillna(0)    
 
-    df['stations coords'] = df[['Departure coords','Return coords']].values.tolist()
-    df['stations'] = df[['Departure station','Return station']].values.tolist()
+#     df['stations coords'] = df[['Departure coords','Return coords']].values.tolist()
+#     df['stations'] = df[['Departure station','Return station']].values.tolist()
     
     
-    if bidirectional:
-        df['stations coords'] = df['stations coords'].map(lambda x: tuple(sorted(x)))
-    else:
-        df['stations coords'] = df['stations coords'].map(lambda x: tuple(x))
-    df['stations'] = df['stations'].map(lambda x: tuple(sorted(x)))
+#     if bidirectional:
+#         df['stations coords'] = df['stations coords'].map(lambda x: tuple(sorted(x)))
+#     else:
+#         df['stations coords'] = df['stations coords'].map(lambda x: tuple(x))
+#     df['stations'] = df['stations'].map(lambda x: tuple(sorted(x)))
     
 
 
@@ -108,15 +116,15 @@ def add_station_coords(df,sdf,bidirectional=True,drop=True):
 def make_con_df(df):
     
     
-    condf = df.groupby(['stations coords','stations']).size()
-
+    #condf = df.groupby(['stations coords','stations']).size()
+    condf = df.groupby(['Departure station','Return station','Departure lat','Return lat','Departure long','Return long']).size()
     condf = condf.reset_index()
-    condf.columns = ['stations coords','stations','trips']
+    condf.columns = ['Departure station','Return station','Departure lat','Return lat','Departure long','Return long','trips']
     
-    condf['start coords'] = condf['stations coords'].map(lambda x: x[0])
-    condf['stop coords'] = condf['stations coords'].map(lambda x: x[1])
-    condf['start station'] = condf['stations'].map(lambda x: x[0])
-    condf['stop station'] = condf['stations'].map(lambda x: x[1])
+#     condf['start coords'] = condf['stations coords'].map(lambda x: x[0])
+#     condf['stop coords'] = condf['stations coords'].map(lambda x: x[1])
+#     condf['start station'] = condf['stations'].map(lambda x: x[0])
+#     condf['stop station'] = condf['stations'].map(lambda x: x[1])
     return condf
 
 def make_thdf(df):
