@@ -1,5 +1,5 @@
 import pandas as pd
-
+import numpy as np
 
 def prep_sys_df(f): 
     
@@ -48,12 +48,19 @@ def get_mem_types(df):
     return idx24,idx365,idx365p,idx365all,idx90
 
 
-def add_station_coords(df,sdf,bidirectional=True):
+def add_station_coords(df,sdf,bidirectional=True,drop=True):
     
     """
     WARNING: This drops records if the listed Departer/Return station name
              isn't in the stations_df.json file"
+             To change this behaviour use drop=False. In this case, unknown stations
+             are given (0,0) coords
     """
+
+    if drop:
+        how='inner'
+    else:
+        how='left'
     
     # Convert geometry to lat/long coords and drop geometry columns
     sdf = sdf.to_crs(epsg=4326)
@@ -63,10 +70,10 @@ def add_station_coords(df,sdf,bidirectional=True):
     
     sdf = sdf[sdf['coordinates'].map(lambda x: x[0]>1)]   # drop stations that don't have a sensible latitude
 
-    df = pd.merge(df,sdf[['name','neighbourhood','coordinates']],how='inner',left_on='Departure station',right_on='name',
+    df = pd.merge(df,sdf[['name','neighbourhood','coordinates']],how=how,left_on='Departure station',right_on='name',
                   suffixes=('_x',' departure'))
 
-    df = pd.merge(df,sdf[['name','neighbourhood','coordinates']],how='inner',left_on='Return station',right_on='name',
+    df = pd.merge(df,sdf[['name','neighbourhood','coordinates']],how=how,left_on='Return station',right_on='name',
                   suffixes=(' departure',' return'))
 
     
@@ -78,9 +85,13 @@ def add_station_coords(df,sdf,bidirectional=True):
     del df['name departure']
     del df['name return']
 
+    df['Departure coords'] = df['Departure coords'].apply(lambda x: (0, 0) if x is np.nan else x)
+    df['Return coords'] = df['Return coords'].apply(lambda x: (0, 0) if x is np.nan else x)
+    
 
     df['stations coords'] = df[['Departure coords','Return coords']].values.tolist()
     df['stations'] = df[['Departure station','Return station']].values.tolist()
+    
     
     if bidirectional:
         df['stations coords'] = df['stations coords'].map(lambda x: tuple(sorted(x)))
