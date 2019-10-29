@@ -130,7 +130,7 @@ def make_con_df(df):
 def make_thdf(df):
     thdf = df.pivot_table(index='Departure', 
                      columns='Departure station', 
-                     values='Account',
+                     values='Bike',
                      fill_value=0, 
                      aggfunc='count')
     return thdf
@@ -138,15 +138,16 @@ def make_thdf(df):
 def make_rhdf(df):
     thdf = df.pivot_table(index='Return', 
                      columns='Return station', 
-                     values='Account',
+                     values='Bike',
                      fill_value=0, 
                      aggfunc='count')
     return thdf
 
-def make_ahdf(df):
-    thdf = make_thdf(df)
-    rhdf = make_rhdf(df)
+# def make_ahdf(df):
+#     thdf = make_thdf(df)
+#     rhdf = make_rhdf(df)
     
-    return rhdf.reindex(thdf.index).fillna(0) + thdf
+#     return rhdf.reindex(thdf.index).fillna(0) + thdf
 
-
+def make_ahdf(df):
+    return make_thdf(df).add(make_rhdf(df),fill_value=0)
